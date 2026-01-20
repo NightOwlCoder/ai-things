@@ -761,37 +761,47 @@
         const tooltipTitle = document.getElementById('tooltipTitle');
         const tooltipText = document.getElementById('tooltipText');
 
+        let currentElementData = null;
+
         document.querySelectorAll('.element[data-element]').forEach(el => {
             el.addEventListener('mouseenter', (e) => {
                 const key = el.dataset.element;
                 const data = elementData[key];
                 if (data) {
+                    currentElementData = data;
                     tooltipTitle.textContent = data.name;
                     tooltipText.textContent = data.short;
-                    
-                    const rect = el.getBoundingClientRect();
-                    const tooltipHeight = 100; // approximate tooltip height
-                    const viewportHeight = window.innerHeight;
-                    
-                    // Position horizontally centered on element
-                    let left = rect.left + (rect.width / 2) - 140;
-                    // Keep tooltip on screen horizontally
-                    left = Math.max(10, Math.min(left, window.innerWidth - 290));
-                    tooltip.style.left = left + 'px';
-                    
-                    // Show above if not enough room below
-                    if (rect.bottom + tooltipHeight + 20 > viewportHeight) {
-                        tooltip.style.top = (rect.top - tooltipHeight - 10) + 'px';
-                    } else {
-                        tooltip.style.top = rect.bottom + 10 + 'px';
-                    }
-                    
                     tooltip.classList.add('visible');
                 }
             });
 
+            el.addEventListener('mousemove', (e) => {
+                if (!currentElementData) return;
+                
+                const tooltipWidth = 280;
+                const tooltipHeight = 100;
+                
+                // Position near mouse, offset slightly
+                let left = e.clientX + 15;
+                let top = e.clientY + 15;
+                
+                // Keep on screen horizontally
+                if (left + tooltipWidth > window.innerWidth - 10) {
+                    left = e.clientX - tooltipWidth - 15;
+                }
+                
+                // Keep on screen vertically
+                if (top + tooltipHeight > window.innerHeight - 10) {
+                    top = e.clientY - tooltipHeight - 15;
+                }
+                
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+            });
+
             el.addEventListener('mouseleave', () => {
                 tooltip.classList.remove('visible');
+                currentElementData = null;
             });
 
             // Click to show detail panel
