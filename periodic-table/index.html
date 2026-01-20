@@ -770,8 +770,22 @@
                     tooltipText.textContent = data.short;
                     
                     const rect = el.getBoundingClientRect();
-                    tooltip.style.left = rect.left + (rect.width / 2) - 140 + 'px';
-                    tooltip.style.top = rect.bottom + 10 + 'px';
+                    const tooltipHeight = 100; // approximate tooltip height
+                    const viewportHeight = window.innerHeight;
+                    
+                    // Position horizontally centered on element
+                    let left = rect.left + (rect.width / 2) - 140;
+                    // Keep tooltip on screen horizontally
+                    left = Math.max(10, Math.min(left, window.innerWidth - 290));
+                    tooltip.style.left = left + 'px';
+                    
+                    // Show above if not enough room below
+                    if (rect.bottom + tooltipHeight + 20 > viewportHeight) {
+                        tooltip.style.top = (rect.top - tooltipHeight - 10) + 'px';
+                    } else {
+                        tooltip.style.top = rect.bottom + 10 + 'px';
+                    }
+                    
                     tooltip.classList.add('visible');
                 }
             });
