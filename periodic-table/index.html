@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Periodic Table</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&family=Caveat:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --border-cyan: #4aeadc;
+            --text-pink: #ff9ecd;
+            --text-yellow: #ffd93d;
+            --text-cyan: #6fffe9;
+            --text-green: #98f5a0;
+            --text-purple: #c9b1ff;
+            --text-orange: #ffb347;
+            --text-blue: #87ceeb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Nunito', sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--text-cyan);
+            font-size: clamp(1.5rem, min(5vw, 6vh), 4rem);
+            margin-bottom: clamp(10px, 2vh, 30px);
+            font-weight: 300;
+            letter-spacing: clamp(2px, 0.5vw, 8px);
+            text-shadow: 0 0 30px rgba(79, 234, 220, 0.3);
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .table-wrapper {
+            display: grid;
+            grid-template-columns: minmax(80px, 150px) repeat(5, 1fr);
+            grid-template-rows: auto repeat(4, 1fr);
+            gap: 8px;
+            padding: 20px;
+            background: rgba(22, 33, 62, 0.5);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(74, 234, 220, 0.1);
+            flex: 1;
+            min-height: 60vh;
+        }
+
+        /* Detail Panel */
+        .detail-panel {
+            width: 350px;
+            background: rgba(22, 33, 62, 0.9);
+            border-radius: 20px;
+            border: 2px solid var(--border-cyan);
+            padding: 25px;
+            display: none;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+            flex-shrink: 0;
+            align-self: stretch;
+        }
+
+        .detail-panel.active {
+            display: flex;
+        }
+
+        .detail-panel .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--text-cyan);
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .detail-panel .close-btn:hover {
+            opacity: 1;
+        }
+
+        .detail-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(74, 234, 220, 0.3);
+            position: relative;
+        }
+
+        .detail-symbol {
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .detail-info h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .detail-info .meta {
+            font-size: 0.95rem;
+            color: var(--text-pink);
+            font-weight: 500;
+        }
+
+        .detail-description {
+            line-height: 1.7;
+            color: #ccc;
+        }
+
+        .detail-description p {
+            margin-bottom: 15px;
+        }
+
+        .detail-description strong {
+            color: var(--text-cyan);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(22, 33, 62, 0.95);
+            border: 1px solid var(--border-cyan);
+            border-radius: 10px;
+            padding: 12px 16px;
+            max-width: 280px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s, transform 0.2s;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: var(--text-cyan);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .tooltip-text {
+            font-size: 0.85rem;
+            color: #bbb;
+            line-height: 1.5;
+        }
+
+        .header-cell {
+            text-align: center;
+            padding: 15px 10px;
+            font-family: 'Caveat', cursive;
+            font-size: 1.3rem;
+        }
+
+        .col-header {
+            color: var(--text-cyan);
+            border-bottom: 2px solid var(--border-cyan);
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+        }
+
+        .col-header .col-num {
+            font-size: 1rem;
+            opacity: 0.7;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .row-header {
+            color: var(--text-pink);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            padding-left: 20px;
+            font-size: 1.2rem;
+            line-height: 1.3;
+        }
+
+        .row-header .row-num {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .element {
+            background: rgba(22, 33, 62, 0.8);
+            border: 2px solid var(--border-cyan);
+            border-radius: 12px;
+            padding: clamp(8px, 2vh, 15px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .element::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(74, 234, 220, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .element:hover::before {
+            opacity: 1;
+        }
+
+        .element:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 40px rgba(74, 234, 220, 0.2);
+            border-color: var(--text-cyan);
+        }
+
+        .element.selected {
+            border-color: var(--text-yellow);
+            box-shadow: 0 0 30px rgba(255, 217, 61, 0.3);
+        }
+
+        .element.empty {
+            background: transparent;
+            border: 2px dashed rgba(74, 234, 220, 0.2);
+            cursor: default;
+        }
+
+        .element.empty:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .symbol {
+            font-size: clamp(1.2rem, min(5vw, 8vh), 4rem);
+            font-weight: 600;
+            margin-bottom: clamp(2px, 1vh, 10px);
+        }
+
+        .name {
+            opacity: 0.9;
+            text-align: center;
+            font-family: 'Caveat', cursive;
+            font-size: clamp(0.7rem, min(2.5vw, 3.5vh), 2rem);
+        }
+
+        /* Color classes for symbols */
+        .color-yellow .symbol { color: var(--text-yellow); }
+        .color-yellow .name { color: var(--text-yellow); opacity: 0.8; }
+        
+        .color-cyan .symbol { color: var(--text-cyan); }
+        .color-cyan .name { color: var(--text-cyan); opacity: 0.8; }
+        
+        .color-green .symbol { color: var(--text-green); }
+        .color-green .name { color: var(--text-green); opacity: 0.8; }
+        
+        .color-purple .symbol { color: var(--text-purple); }
+        .color-purple .name { color: var(--text-purple); opacity: 0.8; }
+        
+        .color-orange .symbol { color: var(--text-orange); }
+        .color-orange .name { color: var(--text-orange); opacity: 0.8; }
+        
+        .color-blue .symbol { color: var(--text-blue); }
+        .color-blue .name { color: var(--text-blue); opacity: 0.8; }
+
+        .color-pink .symbol { color: var(--text-pink); }
+        .color-pink .name { color: var(--text-pink); opacity: 0.8; }
+
+        /* Subtle animation */
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(74, 234, 220, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(74, 234, 220, 0.4); }
+        }
+
+        .element:not(.empty):not(.selected) {
+            animation: glow 4s ease-in-out infinite;
+            animation-delay: calc(var(--delay, 0) * 0.2s);
+        }
+
+        /* Corner placeholder */
+        .corner {
+            grid-column: 1;
+        }
+
+        .header-cell {
+            font-size: clamp(0.9rem, min(2.5vw, 3.5vh), 2rem);
+            padding: clamp(5px, 1.5vh, 20px) clamp(5px, 1vw, 15px);
+        }
+
+        .row-header {
+            font-size: clamp(0.8rem, min(2vw, 3vh), 1.8rem);
+            padding-left: clamp(5px, 1.5vw, 25px);
+        }
+
+        .col-header .col-num {
+            font-size: clamp(0.6rem, min(1.5vw, 2vh), 1.4rem);
+        }
+
+        .row-header .row-num {
+            font-size: clamp(0.5rem, min(1.3vw, 1.8vh), 1.2rem);
+        }
+
+        /* Source link */
+        .source-link {
+            position: fixed;
+            bottom: 10px;
+            right: 15px;
+            font-size: 0.65rem;
+            color: rgba(111, 255, 233, 0.4);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .source-link:hover {
+            color: rgba(111, 255, 233, 0.8);
+        }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .detail-panel {
+                width: 100%;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .table-wrapper {
+                grid-template-columns: minmax(60px, 100px) repeat(5, 1fr);
+                gap: 5px;
+            }
+            
+            .row-header {
+                padding-left: 10px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .table-wrapper {
+                grid-template-columns: minmax(50px, 70px) repeat(5, 1fr);
+                gap: 3px;
+                padding: 10px;
+            }
+            
+            .element {
+                border-radius: 8px;
+            }
+            
+            h1 {
+                margin-bottom: 10px;
+            }
+
+            .detail-panel {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ AI Periodic Table ✨</h1>
+        
+        <div class="main-content">
+            <div class="table-wrapper">
+                <!-- Header Row -->
+                <div class="corner"></div>
+                <div class="header-cell col-header">
+                    <span class="col-num">G1</span>
+                    Reactive
+                </div>
+                <div class="header-cell col-header">
+                    <span class="col-num">G2</span>
+                    Retrieval
+                </div>
+                <div class="header-cell col-header">
+                    <span class="col-num">G3</span>
+                    Orch.
+                </div>
+                <div class="header-cell col-header">
+                    <span class="col-num">G4</span>
+                    Valid.
+                </div>
+                <div class="header-cell col-header">
+                    <span class="col-num">G5</span>
+                    Models
+                </div>
+
+                <!-- Row 1: Primitives -->
+                <div class="header-cell row-header">
+                    <span class="row-num">Row 1</span>
+                    Primitives
+                </div>
+                <div class="element color-yellow" style="--delay: 1" data-element="Pr">
+                    <span class="symbol">Pr</span>
+                    <span class="name">Prompts</span>
+                </div>
+                <div class="element color-cyan" style="--delay: 2" data-element="Em">
+                    <span class="symbol">Em</span>
+                    <span class="name">Embeddings</span>
+                </div>
+                <div class="element empty"></div>
+                <div class="element empty"></div>
+                <div class="element color-green" style="--delay: 3" data-element="Lg">
+                    <span class="symbol">Lg</span>
+                    <span class="name">LLM</span>
+                </div>
+
+                <!-- Row 2: Compositions -->
+                <div class="header-cell row-header">
+                    <span class="row-num">Row 2</span>
+                    Compositions
+                </div>
+                <div class="element color-cyan" style="--delay: 4" data-element="Fc">
+                    <span class="symbol">Fc</span>
+                    <span class="name">Function call</span>
+                </div>
+                <div class="element color-purple" style="--delay: 5" data-element="Vx">
+                    <span class="symbol">Vx</span>
+                    <span class="name">Vector</span>
+                </div>
+                <div class="element color-blue" style="--delay: 6" data-element="Rg">
+                    <span class="symbol">Rg</span>
+                    <span class="name">RAG</span>
+                </div>
+                <div class="element color-purple" style="--delay: 7" data-element="Gr">
+                    <span class="symbol">Gr</span>
+                    <span class="name">Guardrails</span>
+                </div>
+                <div class="element color-yellow" style="--delay: 8" data-element="Mm">
+                    <span class="symbol">Mm</span>
+                    <span class="name">Multimodal</span>
+                </div>
+
+                <!-- Row 3: Deployment -->
+                <div class="header-cell row-header">
+                    <span class="row-num">Row 3</span>
+                    Deployment
+                </div>
+                <div class="element color-cyan" style="--delay: 9" data-element="Ag">
+                    <span class="symbol">Ag</span>
+                    <span class="name">Agent</span>
+                </div>
+                <div class="element color-purple" style="--delay: 10" data-element="Ft">
+                    <span class="symbol">Ft</span>
+                    <span class="name">Finetune</span>
+                </div>
+                <div class="element color-cyan" style="--delay: 11" data-element="Fw">
+                    <span class="symbol">Fw</span>
+                    <span class="name">Framework</span>
+                </div>
+                <div class="element color-orange" style="--delay: 12" data-element="Re">
+                    <span class="symbol">Re</span>
+                    <span class="name">Red-team</span>
+                </div>
+                <div class="element color-yellow" style="--delay: 13" data-element="Sm">
+                    <span class="symbol">Sm</span>
+                    <span class="name">Small</span>
+                </div>
+
+                <!-- Row 4: Emerging -->
+                <div class="header-cell row-header">
+                    <span class="row-num">Row 4</span>
+                    Emerging
+                </div>
+                <div class="element color-yellow" style="--delay: 14" data-element="Ma">
+                    <span class="symbol">Ma</span>
+                    <span class="name">Multi-agent</span>
+                </div>
+                <div class="element color-cyan" style="--delay: 15" data-element="Sy">
+                    <span class="symbol">Sy</span>
+                    <span class="name">Synthetic</span>
+                </div>
+                <div class="element empty"></div>
+                <div class="element color-purple" style="--delay: 16" data-element="In">
+                    <span class="symbol">In</span>
+                    <span class="name">Interpret.</span>
+                </div>
+                <div class="element color-yellow" style="--delay: 17" data-element="Th">
+                    <span class="symbol">Th</span>
+                    <span class="name">Thinking</span>
+                </div>
+            </div>
+
+            <!-- Detail Panel -->
+            <div class="detail-panel" id="detailPanel">
+                <button class="close-btn" onclick="closePanel()">×</button>
+                <div class="detail-header">
+                    <span class="detail-symbol" id="detailSymbol">Pr</span>
+                    <div class="detail-info">
+                        <h2 id="detailName">Prompts</h2>
+                        <span class="meta" id="detailMeta">Row 1 · G1: Reactive</span>
+                    </div>
+                </div>
+                <div class="detail-description" id="detailDescription">
+                    <p>Click an element to see its description.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title" id="tooltipTitle"></div>
+        <div class="tooltip-text" id="tooltipText"></div>
+    </div>
+
+    <!-- Source Link -->
+    <a href="https://www.youtube.com/watch?v=ESBMgZHzfG0" target="_blank" class="source-link">
+        Source: IBM Technology
+    </a>
+
+    <script>
+        const elementData = {
+            Pr: {
+                name: "Prompts",
+                row: "Row 1: Primitives",
+                group: "G1: Reactive",
+                color: "var(--text-yellow)",
+                short: "Instructions you give to an AI. Change one word, get a completely different output.",
+                full: `<p><strong>Instructions you give to an AI</strong>, like "write me an email" or "summarize this document" or "explain quantum physics."</p>
+                <p><strong>Why Reactive?</strong> You change one word in your prompt - you get a completely different output.</p>
+                <p>Prompts are <strong>atomic</strong> - you can't really break them down any further. They're the foundation of all AI interaction.</p>`
+            },
+            Em: {
+                name: "Embeddings",
+                row: "Row 1: Primitives",
+                group: "G2: Retrieval",
+                color: "var(--text-cyan)",
+                short: "Numerical representations of meaning. Similar meanings get similar numbers.",
+                full: `<p><strong>Numerical representations of meaning.</strong> You take some text, like "the cat sat on the mat," and turn it into a list of numbers that capture its meaning.</p>
+                <p><strong>Similar meanings get similar numbers.</strong> If you've heard of vector databases or semantic search, you've bumped into embeddings.</p>
+                <p>This is how AI systems <strong>search and remember</strong>.</p>`
+            },
+            Lg: {
+                name: "Large Language Models",
+                row: "Row 1: Primitives",
+                group: "G5: Models",
+                color: "var(--text-green)",
+                short: "The LLM - like ChatGPT, Claude, and IBM Granite. The stable foundation everything reacts around.",
+                full: `<p><strong>The LLM</strong> - like ChatGPT, Claude, and IBM Granite.</p>
+                <p>These are the <strong>stable foundational capabilities</strong> that everything else reacts around - kind of like noble gases in chemistry.</p>
+                <p><strong>Note:</strong> Row 1 only has three elements (Prompts, Embeddings, LLMs) because everything else in AI is built from combining these primitives.</p>`
+            },
+            Fc: {
+                name: "Function Calling",
+                row: "Row 2: Compositions",
+                group: "G1: Reactive",
+                color: "var(--text-cyan)",
+                short: "When your LLM calls a tool before giving an answer - like invoking a weather API.",
+                full: `<p>When your LLM <strong>calls a tool before giving an answer</strong>. Perhaps it invokes an API.</p>
+                <p>If you ask a model "what's the weather," the model calls a <strong>weather API</strong> to give you real data.</p>
+                <p>It's still in the reactive family because it's making things happen and taking action.</p>`
+            },
+            Vx: {
+                name: "Vector Databases",
+                row: "Row 2: Compositions",
+                group: "G2: Retrieval",
+                color: "var(--text-purple)",
+                short: "Data stores optimized for semantic search. Store millions of embeddings and query them.",
+                full: `<p><strong>Data stores optimized for semantic search.</strong></p>
+                <p>You can store millions of embeddings and then query them to find the most relevant ones.</p>
+                <p>You compose embeddings (that's why it's Row 2) into a vector store for <strong>storage and semantic search</strong>.</p>`
+            },
+            Rg: {
+                name: "RAG",
+                row: "Row 2: Compositions",
+                group: "G3: Orchestration",
+                color: "var(--text-blue)",
+                short: "Retrieval Augmented Generation - retrieve context, augment prompt, generate answer.",
+                full: `<p><strong>Retrieval Augmented Generation</strong> - one of the most powerful patterns:</p>
+                <p>1. You have a question<br>
+                2. The system <strong>retrieves</strong> relevant context using embeddings and vector databases<br>
+                3. It <strong>augments</strong> the prompt with that context<br>
+                4. The LLM <strong>generates</strong> an answer based on what it retrieved</p>
+                <p>RAG <strong>orchestrates multiple elements together</strong>. Note: there's no primitive in the orchestration column because you can't orchestrate one thing.</p>`
+            },
+            Gr: {
+                name: "Guardrails",
+                row: "Row 2: Compositions",
+                group: "G4: Validation",
+                color: "var(--text-purple)",
+                short: "Runtime safety filters. Making sure the AI doesn't say something it shouldn't.",
+                full: `<p><strong>Runtime safety filters</strong>, schema validation.</p>
+                <p>Making sure the AI doesn't say something it shouldn't or output garbage.</p>
+                <p>Essential for <strong>production AI systems</strong> to prevent sensitive information leaks and ensure reliable outputs.</p>`
+            },
+            Mm: {
+                name: "Multi-Modal Models",
+                row: "Row 2: Compositions",
+                group: "G5: Models",
+                color: "var(--text-yellow)",
+                short: "LLMs that can process images and audio as well as text.",
+                full: `<p>LLMs that can process <strong>images and audio</strong> as well as text.</p>
+                <p>These extend the base model capabilities to handle multiple types of input and output.</p>
+                <p>Examples include models that can describe images, generate images from text, or transcribe audio.</p>`
+            },
+            Ag: {
+                name: "Agents",
+                row: "Row 3: Deployment",
+                group: "G1: Reactive",
+                color: "var(--text-cyan)",
+                short: "Think-act-observe loops. The AI plans, takes action, observes results, and keeps going.",
+                full: `<p>Use <strong>think-act-observe loops</strong>:</p>
+                <p>1. The AI <strong>plans</strong> what to do<br>
+                2. <strong>Takes action</strong> (maybe using function calls)<br>
+                3. <strong>Observes</strong> the result<br>
+                4. <strong>Keeps going</strong> until it reaches a goal</p>
+                <p><strong>The reactive family progression:</strong> Prompt → Function → Agent (or: Control → Action → Autonomy)</p>`
+            },
+            Ft: {
+                name: "Fine Tuning",
+                row: "Row 3: Deployment",
+                group: "G2: Retrieval",
+                color: "var(--text-purple)",
+                short: "Take a base model and adapt it - train on your specific data, domain, or use case.",
+                full: `<p>Take a base model and <strong>adapt it</strong> - train it on your specific data, domain, or use case.</p>
+                <p>Like fine tuning on medical papers or your company's codebase.</p>
+                <p><strong>Why Retrieval?</strong> Fine tuning is baking memory directly into the model's weights.</p>
+                <p><strong>Three timescales of memory in G2:</strong><br>
+                • Embeddings: encode meaning<br>
+                • Vector databases: store for search<br>
+                • Fine tuning: store in parameters</p>`
+            },
+            Fw: {
+                name: "Framework",
+                row: "Row 3: Deployment",
+                group: "G3: Orchestration",
+                color: "var(--text-cyan)",
+                short: "Platforms like LangChain that tie everything together to build and deploy AI systems.",
+                full: `<p>Platforms like <strong>LangChain</strong> that tie everything together to build and deploy AI systems.</p>
+                <p>Frameworks provide the <strong>plumbing</strong> for complex AI applications - handling the orchestration of multiple components.</p>
+                <p>They make it easier to combine prompts, embeddings, vector stores, and models into working applications.</p>`
+            },
+            Re: {
+                name: "Red Teaming",
+                row: "Row 3: Deployment",
+                group: "G4: Validation",
+                color: "var(--text-orange)",
+                short: "Adversarial testing - trying to break the AI. Jailbreaks, prompt injection, data exfiltration.",
+                full: `<p><strong>Adversarial testing</strong> - trying to break the AI.</p>
+                <p>This includes testing for:<br>
+                • Jailbreaks<br>
+                • Prompt injection<br>
+                • Data exfiltration<br>
+                • Other security vulnerabilities</p>
+                <p>Essential for <strong>production safety</strong> and building robust AI systems.</p>`
+            },
+            Sm: {
+                name: "Small Models",
+                row: "Row 3: Deployment",
+                group: "G5: Models",
+                color: "var(--text-yellow)",
+                short: "Distilled, specialized models. Fast, cheap, maybe run on your phone.",
+                full: `<p><strong>Distilled, specialized models.</strong></p>
+                <p>They're fast, they're cheap, and they can run on your phone.</p>
+                <p>Sometimes a small model does the job just as well as a thinking model - and at a fraction of the cost and latency.</p>`
+            },
+            Ma: {
+                name: "Multi-Agent",
+                row: "Row 4: Emerging",
+                group: "G1: Reactive",
+                color: "var(--text-yellow)",
+                short: "Multiple AIs working together - debating, collaborating, specializing.",
+                full: `<p>Not one AI - <strong>multiple AIs working together</strong>.</p>
+                <p>Debating, collaborating, specializing. Maybe one agent does research, one does writing, one critiques, and they coordinate to solve complex problems.</p>
+                <p><strong>The reactive family taken to the extreme.</strong></p>
+                <p>This is not science fiction - it's happening now, but still rapidly evolving.</p>`
+            },
+            Sy: {
+                name: "Synthetic Data",
+                row: "Row 4: Emerging",
+                group: "G2: Retrieval",
+                color: "var(--text-cyan)",
+                short: "Using AI to generate training data for AI. When you can't get enough real examples.",
+                full: `<p>Using AI to <strong>generate training data for AI</strong>.</p>
+                <p>If you can't get enough real examples, you can generate synthetic ones.</p>
+                <p>As we hit the limits of available data for AI to train on, <strong>more and more is being done with synthetic data</strong>.</p>`
+            },
+            In: {
+                name: "Interpretability",
+                row: "Row 4: Emerging",
+                group: "G4: Validation",
+                color: "var(--text-purple)",
+                short: "Understanding why a model does what it does. Peeking inside the black box.",
+                full: `<p>Understanding <strong>why a model does what it does</strong>.</p>
+                <p>Peeking inside the black box and finding the neurons responsible for specific behaviors.</p>
+                <p>This is <strong>frontier safety work</strong> - essential for building trustworthy AI systems.</p>`
+            },
+            Th: {
+                name: "Thinking Models",
+                row: "Row 4: Emerging",
+                group: "G5: Models",
+                color: "var(--text-yellow)",
+                short: "Models that spend time reasoning before answering. Chain of thought built into the architecture.",
+                full: `<p>Models that don't answer immediately - they spend time <strong>reasoning</strong>.</p>
+                <p>Chain of thought built directly into the architecture. "Test time compute scaling."</p>
+                <p><strong>The smartest models today tend to be thinking models.</strong></p>`
+            }
+        };
+
+        // Tooltip functionality
+        const tooltip = document.getElementById('tooltip');
+        const tooltipTitle = document.getElementById('tooltipTitle');
+        const tooltipText = document.getElementById('tooltipText');
+
+        document.querySelectorAll('.element[data-element]').forEach(el => {
+            el.addEventListener('mouseenter', (e) => {
+                const key = el.dataset.element;
+                const data = elementData[key];
+                if (data) {
+                    tooltipTitle.textContent = data.name;
+                    tooltipText.textContent = data.short;
+                    
+                    const rect = el.getBoundingClientRect();
+                    tooltip.style.left = rect.left + (rect.width / 2) - 140 + 'px';
+                    tooltip.style.top = rect.bottom + 10 + 'px';
+                    tooltip.classList.add('visible');
+                }
+            });
+
+            el.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+
+            // Click to show detail panel
+            el.addEventListener('click', () => {
+                const key = el.dataset.element;
+                showDetail(key, el);
+            });
+        });
+
+        // Detail panel functionality
+        const detailPanel = document.getElementById('detailPanel');
+        const detailSymbol = document.getElementById('detailSymbol');
+        const detailName = document.getElementById('detailName');
+        const detailMeta = document.getElementById('detailMeta');
+        const detailDescription = document.getElementById('detailDescription');
+
+        let selectedElement = null;
+
+        function showDetail(key, element) {
+            const data = elementData[key];
+            if (!data) return;
+
+            // Update selection
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+            }
+            element.classList.add('selected');
+            selectedElement = element;
+
+            // Update panel content
+            detailSymbol.textContent = key;
+            detailSymbol.style.color = data.color;
+            detailName.textContent = data.name;
+            detailName.style.color = data.color;
+            detailMeta.textContent = `${data.row} · ${data.group}`;
+            detailDescription.innerHTML = data.full;
+
+            // Show panel
+            detailPanel.classList.add('active');
+        }
+
+        function closePanel() {
+            detailPanel.classList.remove('active');
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+                selectedElement = null;
+            }
+        }
+
+        // Close panel when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.element') && !e.target.closest('.detail-panel')) {
+                closePanel();
+            }
+        });
+    </script>
+</body>
+</html>
