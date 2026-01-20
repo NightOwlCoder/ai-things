@@ -376,6 +376,150 @@
             font-style: italic;
         }
 
+        /* Reactions Toggle Button */
+        .reactions-toggle {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            border: 1px solid var(--border-cyan);
+            color: var(--text-cyan);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .reactions-toggle:hover {
+            background: rgba(74, 234, 220, 0.2);
+            box-shadow: 0 0 20px rgba(74, 234, 220, 0.3);
+        }
+
+        .reactions-toggle.active {
+            background: rgba(74, 234, 220, 0.3);
+            border-color: var(--text-yellow);
+            color: var(--text-yellow);
+        }
+
+        /* SVG Arrow Overlay */
+        .arrow-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .arrow-overlay path {
+            fill: none;
+            stroke: var(--text-cyan);
+            stroke-width: 3;
+            stroke-linecap: round;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .arrow-overlay path.visible {
+            opacity: 1;
+        }
+
+        .arrow-overlay path.animated {
+            stroke-dasharray: 10 5;
+            animation: flowArrow 1s linear infinite;
+        }
+
+        @keyframes flowArrow {
+            to {
+                stroke-dashoffset: -15;
+            }
+        }
+
+        /* Reaction mode element states */
+        .element.reaction-active {
+            z-index: 60;
+            animation: none !important;
+            box-shadow: 0 0 30px rgba(74, 234, 220, 0.5);
+            border-color: var(--text-cyan);
+        }
+
+        .element.reaction-dimmed {
+            opacity: 0.3;
+            animation: none !important;
+        }
+
+        .element.reaction-wrapper {
+            box-shadow: 0 0 30px rgba(255, 158, 205, 0.5);
+            border-color: var(--text-pink);
+        }
+
+        /* Reaction cards in detail panel */
+        .reaction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .reaction-card {
+            background: rgba(74, 234, 220, 0.1);
+            border: 1px solid rgba(74, 234, 220, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reaction-card:hover {
+            background: rgba(74, 234, 220, 0.2);
+            border-color: var(--text-cyan);
+            transform: translateX(5px);
+        }
+
+        .reaction-card.active {
+            background: rgba(74, 234, 220, 0.25);
+            border-color: var(--text-yellow);
+        }
+
+        .reaction-card h3 {
+            color: var(--text-cyan);
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .reaction-card .flow {
+            font-family: 'Caveat', cursive;
+            font-size: 1.2rem;
+            color: var(--text-yellow);
+            margin-bottom: 8px;
+        }
+
+        .reaction-card p {
+            font-size: 0.85rem;
+            color: #aaa;
+            line-height: 1.5;
+        }
+
+        /* Back button in reactions */
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-pink);
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 5px 0;
+            transition: color 0.2s;
+            text-align: left;
+        }
+
+        .back-btn:hover {
+            color: var(--text-cyan);
+        }
+
         /* Responsive */
         @media (max-width: 1100px) {
             .main-content {
@@ -575,10 +719,25 @@
     <!-- Hint text -->
     <div class="hint-text">try clicking an element...</div>
 
+    <!-- Reactions Toggle -->
+    <button class="reactions-toggle" id="reactionsToggle">⚗️ Reactions</button>
+
     <!-- Source Link -->
     <a href="https://www.youtube.com/watch?v=ESBMgZHzfG0" target="_blank" class="source-link">
         Source: IBM Technology
     </a>
+
+    <!-- SVG Arrow Overlay -->
+    <svg class="arrow-overlay" id="arrowOverlay">
+        <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="var(--text-cyan)" />
+            </marker>
+            <marker id="arrowhead-reverse" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto">
+                <polygon points="10 0, 0 3.5, 10 7" fill="var(--text-cyan)" />
+            </marker>
+        </defs>
+    </svg>
 
     <script>
         const elementData = {
@@ -837,6 +996,20 @@
             const data = elementData[key];
             if (!data) return;
 
+            // Exit reactions mode when viewing an element
+            if (reactionsMode) {
+                reactionsMode = false;
+                reactionsToggle.classList.remove('active');
+                activeReaction = null;
+                // Clear element states from reaction visualization
+                document.querySelectorAll('.element').forEach(el => {
+                    el.classList.remove('reaction-active', 'reaction-dimmed', 'reaction-wrapper');
+                });
+                // Clear arrows
+                const paths = arrowOverlay.querySelectorAll('path');
+                paths.forEach(p => p.remove());
+            }
+
             // Update selection
             if (selectedElement) {
                 selectedElement.classList.remove('selected');
@@ -862,12 +1035,289 @@
                 selectedElement.classList.remove('selected');
                 selectedElement = null;
             }
+            // Also clear reactions when panel is closed
+            if (reactionsMode) {
+                clearReaction();
+            }
         }
 
         // Close panel when clicking outside
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.element') && !e.target.closest('.detail-panel')) {
+            if (!e.target.closest('.element') && !e.target.closest('.detail-panel') && !e.target.closest('.reactions-toggle')) {
                 closePanel();
+                clearReaction();
+            }
+        });
+
+        // ===== REACTIONS SYSTEM =====
+        
+        const reactions = {
+            rag: {
+                name: "Production RAG Chatbot",
+                flow: "Em → Vx → Rg → Pr → Lg + Gr",
+                elements: ['Em', 'Vx', 'Rg', 'Pr', 'Lg'],
+                wrapper: 'Gr',
+                description: `<p>Building a chatbot that knows your company's documentation:</p>
+                <p>1. <strong>Em:</strong> Turn documents into vectors<br>
+                2. <strong>Vx:</strong> Store in vector database<br>
+                3. <strong>Rg:</strong> Query and retrieve relevant chunks<br>
+                4. <strong>Pr:</strong> Augment the prompt with context<br>
+                5. <strong>Lg:</strong> Generate grounded answer<br>
+                6. <strong>Gr:</strong> Wrap in safety filters</p>`
+            },
+            agentic: {
+                name: "Agentic Loop",
+                flow: "Ag ↔ Fc → Fw",
+                elements: ['Ag', 'Fc', 'Fw'],
+                bidirectional: [['Ag', 'Fc']], // Pairs that have bidirectional arrows
+                description: `<p>"Book me a flight to Tokyo under $800"</p>
+                <p>1. <strong>Ag:</strong> Agent plans and breaks down the goal<br>
+                2. <strong>Fc:</strong> Function calls invoke external APIs<br>
+                3. Agent observes results, decides next action<br>
+                4. <strong>Loop:</strong> Think → Act → Observe → Repeat<br>
+                5. <strong>Fw:</strong> Framework provides the plumbing</p>`
+            }
+        };
+
+        const reactionsToggle = document.getElementById('reactionsToggle');
+        const arrowOverlay = document.getElementById('arrowOverlay');
+        let activeReaction = null;
+        let reactionsMode = false;
+
+        // Toggle reactions menu
+        reactionsToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            reactionsMode = !reactionsMode;
+            reactionsToggle.classList.toggle('active', reactionsMode);
+            
+            if (reactionsMode) {
+                showReactionsMenu();
+            } else {
+                clearReaction();
+                closePanel();
+            }
+        });
+
+        function showReactionsMenu() {
+            // Clear any element selection
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+                selectedElement = null;
+            }
+
+            // Show reactions panel
+            detailSymbol.textContent = '⚗️';
+            detailSymbol.style.color = 'var(--text-cyan)';
+            detailName.textContent = 'AI Reactions';
+            detailName.style.color = 'var(--text-cyan)';
+            detailMeta.textContent = 'How elements combine';
+            
+            detailDescription.innerHTML = `
+                <div class="reaction-list">
+                    <div class="reaction-card" data-reaction="rag">
+                        <h3>🔍 Production RAG Chatbot</h3>
+                        <div class="flow">Em → Vx → Rg → Pr → Lg + Gr</div>
+                        <p>Retrieve context, augment prompt, generate grounded answer with safety filters.</p>
+                    </div>
+                    <div class="reaction-card" data-reaction="agentic">
+                        <h3>🤖 Agentic Loop</h3>
+                        <div class="flow">Ag ↔ Fc → Fw</div>
+                        <p>Think-act-observe loops with function calling, orchestrated by frameworks.</p>
+                    </div>
+                </div>
+            `;
+
+            // Add click handlers to reaction cards
+            document.querySelectorAll('.reaction-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const reactionKey = card.dataset.reaction;
+                    activateReaction(reactionKey);
+                    
+                    // Update card styles
+                    document.querySelectorAll('.reaction-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                });
+            });
+
+            detailPanel.classList.add('active');
+        }
+
+        function activateReaction(reactionKey) {
+            const reaction = reactions[reactionKey];
+            if (!reaction) return;
+
+            activeReaction = reactionKey;
+
+            // Update description in panel
+            detailDescription.innerHTML = `
+                <button class="back-btn" id="backToReactions">← Back to reactions</button>
+                <div class="reaction-list" style="margin-top: 10px;">
+                    <div class="reaction-card active" data-reaction="${reactionKey}">
+                        <h3>${reactionKey === 'rag' ? '🔍' : '🤖'} ${reaction.name}</h3>
+                        <div class="flow">${reaction.flow}</div>
+                    </div>
+                </div>
+                ${reaction.description}
+                <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-pink);">
+                    <em>Click outside or press ESC to exit</em>
+                </p>
+            `;
+
+            // Add back button handler
+            const backBtn = document.getElementById('backToReactions');
+            if (backBtn) {
+                backBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Clear arrows and element states but stay in reactions mode
+                    activeReaction = null;
+                    document.querySelectorAll('.element').forEach(el => {
+                        el.classList.remove('reaction-active', 'reaction-dimmed', 'reaction-wrapper');
+                    });
+                    const paths = arrowOverlay.querySelectorAll('path');
+                    paths.forEach(p => p.remove());
+                    showReactionsMenu();
+                });
+            }
+
+            // Highlight elements and dim others
+            document.querySelectorAll('.element[data-element]').forEach(el => {
+                const key = el.dataset.element;
+                el.classList.remove('reaction-active', 'reaction-dimmed', 'reaction-wrapper');
+                
+                if (reaction.elements.includes(key)) {
+                    el.classList.add('reaction-active');
+                } else if (reaction.wrapper === key) {
+                    el.classList.add('reaction-active', 'reaction-wrapper');
+                } else {
+                    el.classList.add('reaction-dimmed');
+                }
+            });
+
+            // Draw arrows
+            drawArrows(reaction);
+        }
+
+        function clearReaction() {
+            activeReaction = null;
+            reactionsMode = false;
+            reactionsToggle.classList.remove('active');
+
+            // Clear element states
+            document.querySelectorAll('.element').forEach(el => {
+                el.classList.remove('reaction-active', 'reaction-dimmed', 'reaction-wrapper');
+            });
+
+            // Clear arrows
+            const paths = arrowOverlay.querySelectorAll('path');
+            paths.forEach(p => p.remove());
+        }
+
+        function drawArrows(reaction) {
+            // Clear existing arrows
+            const existingPaths = arrowOverlay.querySelectorAll('path');
+            existingPaths.forEach(p => p.remove());
+
+            const allElements = reaction.wrapper 
+                ? [...reaction.elements, reaction.wrapper]
+                : reaction.elements;
+
+            // Get element positions
+            const positions = {};
+            allElements.forEach(key => {
+                const el = document.querySelector(`[data-element="${key}"]`);
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    positions[key] = {
+                        x: rect.left + rect.width / 2,
+                        y: rect.top + rect.height / 2,
+                        width: rect.width,
+                        height: rect.height
+                    };
+                }
+            });
+
+            // Draw arrows between consecutive elements
+            for (let i = 0; i < reaction.elements.length - 1; i++) {
+                const from = reaction.elements[i];
+                const to = reaction.elements[i + 1];
+                
+                if (positions[from] && positions[to]) {
+                    const isBidirectional = reaction.bidirectional?.some(
+                        pair => (pair[0] === from && pair[1] === to) || (pair[0] === to && pair[1] === from)
+                    );
+                    
+                    createArrow(positions[from], positions[to], isBidirectional);
+                }
+            }
+
+            // Draw wrapper connection (dashed line to Guardrails)
+            if (reaction.wrapper && positions[reaction.wrapper]) {
+                const lastEl = reaction.elements[reaction.elements.length - 1];
+                if (positions[lastEl]) {
+                    createArrow(positions[lastEl], positions[reaction.wrapper], false, true);
+                }
+            }
+        }
+
+        function createArrow(from, to, bidirectional = false, dashed = false) {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            
+            // Calculate control points for curved arrow
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Shorten the line to not overlap elements
+            const shortenBy = 35;
+            const angle = Math.atan2(dy, dx);
+            
+            const startX = from.x + Math.cos(angle) * shortenBy;
+            const startY = from.y + Math.sin(angle) * shortenBy;
+            const endX = to.x - Math.cos(angle) * shortenBy;
+            const endY = to.y - Math.sin(angle) * shortenBy;
+
+            // Curve the arrow slightly
+            const midX = (startX + endX) / 2;
+            const midY = (startY + endY) / 2;
+            const perpX = -dy / distance * 20;
+            const perpY = dx / distance * 20;
+            const ctrlX = midX + perpX;
+            const ctrlY = midY + perpY;
+
+            const d = `M ${startX} ${startY} Q ${ctrlX} ${ctrlY} ${endX} ${endY}`;
+            path.setAttribute('d', d);
+            path.setAttribute('marker-end', 'url(#arrowhead)');
+            
+            if (bidirectional) {
+                path.setAttribute('marker-start', 'url(#arrowhead-reverse)');
+            }
+            
+            if (dashed) {
+                path.style.strokeDasharray = '8 4';
+                path.style.stroke = 'var(--text-pink)';
+            }
+
+            path.classList.add('visible', 'animated');
+            arrowOverlay.appendChild(path);
+        }
+
+        // Redraw arrows on window resize
+        window.addEventListener('resize', () => {
+            if (activeReaction) {
+                drawArrows(reactions[activeReaction]);
+            }
+        });
+
+        // ESC key to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (reactionsMode) {
+                    clearReaction();
+                    closePanel();
+                } else {
+                    closePanel();
+                }
             }
         });
     </script>
